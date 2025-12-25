@@ -183,23 +183,40 @@ bot.onText(/\/fal|\/start/, (msg) => {
     sendPoemToChat(msg.chat.id);
 });
 
-bot.onText(/\/broadcast (.+)/, (msg, match) => {
-    if (msg.chat.id !== adminId) return;
-    const text = match[1];
-    
-    logActivity(adminId, 'BROADCAST_START', `Message: ${text}`);
+// 👇 تغییر مهم: استفاده از [\s\S] برای پشتیبانی از چند خط
+bot.onText(/\/broadcast ([\s\S]+)/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const textToSend = match[1]; // متن کامل (چند خطی)
 
-    subscribers.forEach(id => {
-        bot.sendMessage(id, `📢 *پیام:* ${text}`, {parse_mode: 'Markdown'})
+    if (chatId !== adminId) {
+        bot.sendMessage(chatId, "⛔ شما اجازه دسترسی به این دستور را ندارید.");
+        return;
+    }
+
+    // لاگ کردن شروع عملیات
+    logActivity(adminId, 'BROADCAST_START', `Message length: ${textToSend.length}`);
+
+    if (subscribers.length === 0) {
+        bot.sendMessage(chatId, "لیست مشترکین خالی است.");
+        return;
+    }
+
+    let successCount = 0;
+    
+    // ارسال به همه
+    subscribers.forEach((subId) => {
+        bot.sendMessage(subId, `📢 *پیام اطلاعیه:*\n\n${textToSend}`, { parse_mode: 'Markdown' })
             .then(() => {
-                logActivity(id, 'BROADCAST_SENT', 'Delivered successfully');
+                successCount++;
+                logActivity(subId, 'BROADCAST_SENT', 'Delivered');
             })
-            .catch((err) => {
-                logActivity(id, 'BROADCAST_FAIL', err.message);
+            .catch(err => {
+                console.error(`Failed to broadcast to ${subId}`);
+                logActivity(subId, 'BROADCAST_FAIL', err.message);
             });
     });
-    
-    bot.sendMessage(msg.chat.id, '✅ ارسال شد.');
+
+    bot.sendMessage(chatId, `✅ پیام شما در صف ارسال قرار گرفت.`);
 });
 
 // 👇 Updated Backup Command (Sends both History and Logs) 👇
