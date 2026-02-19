@@ -254,3 +254,10 @@ cron.schedule('0 0 10 * * *', () => {
 });
 
 console.log('Bot is running with Logging Feature...');
+
+const http = require('http');
+const port = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end('Bot is running!');
+}).listen(port);
